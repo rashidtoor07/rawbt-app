@@ -22,9 +22,10 @@ captures/
 gradle-app.setting
 !gradle-wrapper.jar
 
-# Keystore files
+# Keystore files and signing credentials
 *.jks
 *.keystore
+keystore.properties
 
 # Local configuration files (ideally for IDEs)
 local.properties

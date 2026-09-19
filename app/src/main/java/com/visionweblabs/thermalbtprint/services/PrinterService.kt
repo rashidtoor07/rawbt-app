@@ -1,4 +1,4 @@
-package com.rawbtclone.services
+package com.visionweblabs.thermalbtprint.services
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -11,9 +11,9 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.rawbtclone.bluetooth.PrinterManager
-import com.rawbtclone.utils.EscPosBuilder
-import com.rawbtclone.utils.JsonPrintParser
+import com.visionweblabs.thermalbtprint.bluetooth.PrinterManager
+import com.visionweblabs.thermalbtprint.utils.EscPosBuilder
+import com.visionweblabs.thermalbtprint.utils.JsonPrintParser
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.BufferedInputStream

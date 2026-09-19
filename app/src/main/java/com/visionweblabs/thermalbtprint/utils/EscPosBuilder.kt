@@ -1,4 +1,4 @@
-package com.rawbtclone.utils
+package com.visionweblabs.thermalbtprint.utils
 
 import android.graphics.Bitmap
 import java.io.ByteArrayOutputStream

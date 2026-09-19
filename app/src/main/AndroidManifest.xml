@@ -16,8 +16,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AminmartRawBT">
-        
+        android:theme="@style/Theme.BTPrint">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -40,7 +40,7 @@
             android:name=".receivers.PrintIntentReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.rawbtclone.PRINT" />
+                <action android:name="com.visionweblabs.thermalbtprint.PRINT" />
             </intent-filter>
         </receiver>
 

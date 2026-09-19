@@ -1,6 +1,6 @@
-# RawBT Clone
+# BT Print
 
-This is an Android application that acts as a printer bridge for thermal Bluetooth printers, similar to the original RAWBT app. It supports ESC/POS commands and can receive print jobs from other applications via Android Intents or an HTTP server.
+An Android application that acts as a printer bridge for thermal Bluetooth printers. It supports ESC/POS commands and can receive print jobs from other applications via Android Intents or an HTTP server.
 
 ## 🚀 Features
 
@@ -27,13 +27,30 @@ This is an Android application that acts as a printer bridge for thermal Bluetoo
 3.  **Locate the APK**:
     *   After a successful build (either via Android Studio or `gradlew`), the APK file (`app-debug.apk` for debug builds) will be located in the `app/build/outputs/apk/debug/` directory.
 
+## 🔐 Release Signing (required for Play Store)
+
+`app/keystore.properties` (git-ignored, never commit it) tells Gradle which keystore to sign release builds with:
+
+```
+storeFile=btprint-release.jks
+storePassword=********
+keyAlias=btprint
+keyPassword=********
+```
+
+Copy `app/keystore.properties.example` to `app/keystore.properties` and fill in the real values, keeping the `.jks` file next to it inside `app/`. Without this file, `assembleRelease`/`bundleRelease` produce an **unsigned** build. Back up the `.jks` file and passwords somewhere durable (password manager, secure vault) — losing them means you can never publish an update to the same Play Store listing again.
+
+```bash
+./gradlew bundleRelease   # app/build/outputs/bundle/release/app-release.aab
+```
+
 ## 📱 How to Use
 
 ### 1. Via Intent
 
 You can trigger a print job from another app by sending a `Broadcast Intent`.
 
--   **Action**: `com.rawbtclone.PRINT`
+-   **Action**: `com.visionweblabs.thermalbtprint.PRINT`
 -   **Extras**:
     -   `type`: (String) `text` or `json`.
     -   `data`: (String) The content to print. For `json`, use the same command array as the HTTP server (see the JSON command format below).
@@ -42,11 +59,11 @@ You can trigger a print job from another app by sending a `Broadcast Intent`.
 
 ```bash
 # Plain text
-adb shell am broadcast -a com.rawbtclone.PRINT -n com.rawbtclone/.receivers.PrintIntentReceiver \
+adb shell am broadcast -a com.visionweblabs.thermalbtprint.PRINT -n com.visionweblabs.thermalbtprint/.receivers.PrintIntentReceiver \
   --es type text --es data "Hello World!"
 
 # JSON commands
-adb shell am broadcast -a com.rawbtclone.PRINT -n com.rawbtclone/.receivers.PrintIntentReceiver \
+adb shell am broadcast -a com.visionweblabs.thermalbtprint.PRINT -n com.visionweblabs.thermalbtprint/.receivers.PrintIntentReceiver \
   --es type json --es data '[{"type":"text","text":"My Store","align":"center","bold":true,"newline":true},{"type":"cut"}]'
 ```
 
@@ -195,7 +212,7 @@ This will show:
 │   └── src
 │       └── main
 │           ├── AndroidManifest.xml
-│           ├── java/com/rawbtclone
+│           ├── java/com/visionweblabs/thermalbtprint
 │           │   ├── MainActivity.kt
 │           │   ├── bluetooth/
 │           │   │   ├── BluetoothDiscoveryManager.kt

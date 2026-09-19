@@ -1,2 +1,2 @@
-rootProject.name = "RawBTClone"
+rootProject.name = "BTPrint"
 include ':app'

@@ -1,4 +1,4 @@
-package com.rawbtclone.utils
+package com.visionweblabs.thermalbtprint.utils
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException

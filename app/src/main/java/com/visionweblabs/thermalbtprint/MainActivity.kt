@@ -1,4 +1,4 @@
-package com.rawbtclone
+package com.visionweblabs.thermalbtprint
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -20,10 +20,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
-import com.rawbtclone.bluetooth.BluetoothDiscoveryManager
-import com.rawbtclone.bluetooth.PrinterManager
-import com.rawbtclone.services.PrinterService
-import com.rawbtclone.utils.EscPosBuilder
+import com.visionweblabs.thermalbtprint.bluetooth.BluetoothDiscoveryManager
+import com.visionweblabs.thermalbtprint.bluetooth.PrinterManager
+import com.visionweblabs.thermalbtprint.services.PrinterService
+import com.visionweblabs.thermalbtprint.utils.EscPosBuilder
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity() {
             .align(EscPosBuilder.ALIGN_CENTER)
             .fontSize(EscPosBuilder.FONT_SIZE_NORMAL)
             .bold(true)
-            .text("AMINMART RAWBT TEST")
+            .text("BT PRINT TEST")
             .lineBreak()
             .bold(false)
             .fontSize(EscPosBuilder.FONT_SIZE_NORMAL)
@@ -218,7 +218,7 @@ class MainActivity : AppCompatActivity() {
             .lineBreak()
             .lineBreak()
             .align(EscPosBuilder.ALIGN_CENTER)
-            .qrCode("https://github.com/wahyu")
+            .qrCode("BT Print - Test QR Code")
             .feed(2)
             .cut()
             .build()
