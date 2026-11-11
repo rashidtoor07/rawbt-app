@@ -12,14 +12,15 @@ if (hasReleaseKeystore) {
 
 android {
     namespace 'com.visionweblabs.thermalbtprint'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.visionweblabs.thermalbtprint"
         minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        targetSdk 36
+        // The release workflow raises these on every build; Play rejects reused version codes
+        versionCode((System.getenv("VERSION_CODE") ?: "1").toInteger())
+        versionName(System.getenv("VERSION_NAME") ?: "1.0")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

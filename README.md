@@ -31,7 +31,31 @@ Every printout ends with a short `BTPrint by VisionWebLabs.com` footer.
 3.  **Locate the APK**:
     *   After a successful build (either via Android Studio or `gradlew`), the APK file (`app-debug.apk` for debug builds) will be located in the `app/build/outputs/apk/debug/` directory.
 
-## 🔐 Release Signing (required for Play Store)
+## 🔐 Signed Releases
+
+### On GitHub (recommended)
+
+The **Signed Release** workflow builds a signed APK (for direct install) and AAB (for the Play Store).
+
+One-time setup, in the repository on GitHub: **Settings → Secrets and variables → Actions → New repository secret**. Add two secrets:
+
+| Name | Value |
+|---|---|
+| `KEYSTORE_BASE64` | Contents of `KEYSTORE_BASE64.txt` (the keystore file encoded as text) |
+| `KEYSTORE_PASSWORD` | Contents of `KEYSTORE_PASSWORD.txt` |
+
+To create a keystore text yourself on a Mac: `base64 -i btprint-release.jks | pbcopy`, then paste it as the secret.
+
+Then either:
+
+- **Publish a release:** create a tag such as `v1.0.0` (on GitHub: **Releases → Draft a new release → Choose a tag → type `v1.0.0` → Create new tag → Publish release**). The workflow attaches `BTPrint-1.0.0.apk` and `BTPrint-1.0.0.aab` to that release.
+- **Just get the files:** **Actions → Signed Release → Run workflow**, then download the artifact from the finished run.
+
+Each build gets a higher version code automatically, which Play requires for every upload.
+
+See [PLAY_STORE.md](PLAY_STORE.md) for the Play Console steps.
+
+### Locally
 
 `app/keystore.properties` (git-ignored, never commit it) tells Gradle which keystore to sign release builds with:
 

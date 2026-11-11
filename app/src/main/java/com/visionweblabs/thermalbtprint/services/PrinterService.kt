@@ -58,7 +58,7 @@ class PrinterService : Service() {
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         } else {
             startForeground(1, notification)
         }
@@ -117,7 +117,6 @@ class PrinterService : Service() {
                 bytesRead += read
             }
             val jsonBody = String(body, 0, bytesRead, Charsets.UTF_8)
-            Log.d("PrinterService", "Received body: $jsonBody")
 
             val error = if (jsonBody.isNotBlank()) printFromJson(jsonBody) else null
             if (error == null) {

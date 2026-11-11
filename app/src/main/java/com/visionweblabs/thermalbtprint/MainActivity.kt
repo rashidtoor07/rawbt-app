@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -22,6 +23,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.visionweblabs.thermalbtprint.bluetooth.BluetoothDiscoveryManager
 import com.visionweblabs.thermalbtprint.bluetooth.PrinterManager
@@ -162,12 +165,33 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Selected: ${device.name ?: device.address}", Toast.LENGTH_SHORT).show()
         }
 
+        applySystemBarInsets(findViewById(R.id.root))
+
         updateStatus()
         if (checkPermissions()) {
             updateDeviceList()
+            startPrinterService()
+        } else {
+            requestPermissions()
         }
+    }
 
-        // Start local HTTP server service
+    // Android 15+ draws apps behind the navigation bar; keep the bottom buttons clear of it
+    private fun applySystemBarInsets(root: View) {
+        val left = root.paddingLeft
+        val right = root.paddingRight
+        val bottom = root.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            view.setPadding(left + bars.left, view.paddingTop, right + bars.right, bottom + bars.bottom)
+            insets
+        }
+    }
+
+    // A connectedDevice foreground service may only start once Bluetooth permission is granted
+    private fun startPrinterService() {
         val serviceIntent = Intent(this, PrinterService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent)
@@ -292,12 +316,12 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show()
     }
 
-    private fun checkPermissions(): Boolean {
-        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    // BLUETOOTH_SCAN is declared neverForLocation, so Android 12+ needs no location permission
+    private fun requiredPermissions(): Array<String> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.BLUETOOTH_CONNECT
             )
         } else {
             arrayOf(
@@ -307,26 +331,14 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        return permissions.all {
+    private fun checkPermissions(): Boolean {
+        return requiredPermissions().all {
             ActivityCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
     private fun requestPermissions() {
-        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        } else {
-            arrayOf(
-                Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        }
-        ActivityCompat.requestPermissions(this, permissions, 100)
+        ActivityCompat.requestPermissions(this, requiredPermissions(), 100)
     }
 
     override fun onRequestPermissionsResult(
@@ -335,8 +347,10 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+        // grantResults is empty when the dialog is dismissed, so re-check rather than trust all{}
+        if (requestCode == 100 && checkPermissions()) {
             updateDeviceList()
+            startPrinterService()
         } else {
             Toast.makeText(this, "Permissions required for Bluetooth", Toast.LENGTH_SHORT).show()
         }
