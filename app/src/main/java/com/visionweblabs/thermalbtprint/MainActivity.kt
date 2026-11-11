@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothAdapter
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,8 +12,10 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
@@ -50,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnScan: Button
     private lateinit var btnTestPrint: Button
     private lateinit var btnStopService: Button
+    private lateinit var etBarcode: EditText
 
     private var devicesList: List<BluetoothDevice> = emptyList()
     private lateinit var bluetoothAdapter: BluetoothAdapter
@@ -102,6 +106,11 @@ class MainActivity : AppCompatActivity() {
         btnScan = findViewById(R.id.btnScan)
         btnTestPrint = findViewById(R.id.btnTestPrint)
         btnStopService = findViewById(R.id.btnStopService)
+        etBarcode = findViewById(R.id.etBarcode)
+
+        findViewById<Button>(R.id.btnPrintBarcode).setOnClickListener { printCode(qr = false) }
+        findViewById<Button>(R.id.btnPrintQr).setOnClickListener { printCode(qr = true) }
+        findViewById<Button>(R.id.btnBrowserPrinting).setOnClickListener { openPrintSettings() }
 
         btnScan.setOnClickListener {
             if (!bluetoothDiscoveryManager.hasBluetoothHardware()) {
@@ -219,10 +228,45 @@ class MainActivity : AppCompatActivity() {
             .lineBreak()
             .align(EscPosBuilder.ALIGN_CENTER)
             .qrCode("BT Print - Test QR Code")
+            .branding()
             .feed(2)
             .cut()
             .build()
 
+        sendToPrinter(data)
+    }
+
+    private fun printCode(qr: Boolean) {
+        val content = etBarcode.text.toString().trim()
+        if (content.isEmpty()) {
+            Toast.makeText(this, R.string.barcode_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        // CODE128 set B only encodes printable ASCII, and long values overflow 58mm paper
+        if (!qr && (content.length > EscPosBuilder.MAX_BARCODE_LENGTH || content.any { it.code !in 32..126 })) {
+            Toast.makeText(
+                this,
+                getString(R.string.barcode_invalid, EscPosBuilder.MAX_BARCODE_LENGTH),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val builder = EscPosBuilder().init().align(EscPosBuilder.ALIGN_CENTER)
+        if (qr) builder.qrCode(content) else builder.barcode(content)
+        sendToPrinter(builder.lineBreak().branding().feed(3).cut().build())
+    }
+
+    private fun openPrintSettings() {
+        Toast.makeText(this, R.string.browser_printing_help, Toast.LENGTH_LONG).show()
+        try {
+            startActivity(Intent(Settings.ACTION_PRINT_SETTINGS))
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.print_settings_unavailable, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun sendToPrinter(data: ByteArray) {
         lifecycleScope.launch {
             printerManager.print(data) { success, error ->
                 if (success) {

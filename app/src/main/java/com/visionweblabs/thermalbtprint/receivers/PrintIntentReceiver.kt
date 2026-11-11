@@ -28,7 +28,7 @@ class PrintIntentReceiver : BroadcastReceiver() {
                     builder.text(dataString).lineBreak()
                 }
 
-                val printData = builder.feed(3).cut().build()
+                val printData = builder.branding().feed(3).cut().build()
                 
                 // Keep the process alive until the print finishes; onReceive returning
                 // alone lets the system kill it mid-job.

@@ -15,6 +15,9 @@ class EscPosBuilder {
         const val FONT_SIZE_DOUBLE_HEIGHT = 0x01
         const val FONT_SIZE_DOUBLE_WIDTH = 0x10
         const val FONT_SIZE_DOUBLE = 0x11
+
+        const val BRANDING = "BTPrint by VisionWebLabs.com"
+        const val MAX_BARCODE_LENGTH = 30
     }
 
     fun init(): EscPosBuilder {
@@ -98,14 +101,25 @@ class EscPosBuilder {
     }
 
     fun barcode(content: String): EscPosBuilder {
-        // CODE128
+        // In CODE128 data "{" starts a code-set switch, so a literal "{" is sent as "{{"
+        val data = content.replace("{", "{{").toByteArray(Charsets.US_ASCII)
+        require(data.size + 2 <= 255) { "Barcode content too long" }
+        // Human-readable text below the bars
+        bos.write(byteArrayOf(0x1D, 0x48, 0x02))
+        // Bar height in dots
+        bos.write(byteArrayOf(0x1D, 0x68, 80))
+        // Narrow bars for long content so it still fits on 58mm paper
+        bos.write(0x1D)
+        bos.write(0x77)
+        bos.write(if (content.length <= 12) 2 else 1)
+        // CODE128, code set B
         bos.write(0x1D)
         bos.write(0x6B)
-        bos.write(73) // m = 73 for CODE128
-        bos.write(content.length + 2)
-        bos.write(0x7B) // {
-        bos.write(0x42) // B
-        bos.write(content.toByteArray())
+        bos.write(73)
+        bos.write(data.size + 2)
+        bos.write(0x7B)
+        bos.write(0x42)
+        bos.write(data)
         return this
     }
 
@@ -139,10 +153,19 @@ class EscPosBuilder {
         return this
     }
 
-    fun image(bitmap: Bitmap): EscPosBuilder {
-        val bytes = ImageConverter.convertBitmapToEscPos(bitmap)
+    fun image(bitmap: Bitmap, height: Int = bitmap.height): EscPosBuilder {
+        val bytes = ImageConverter.convertBitmapToEscPos(bitmap, height)
         bos.write(bytes)
         return this
+    }
+
+    fun branding(): EscPosBuilder {
+        return lineBreak()
+            .align(ALIGN_CENTER)
+            .fontSize(FONT_SIZE_NORMAL)
+            .bold(false)
+            .text(BRANDING)
+            .lineBreak()
     }
 
     fun table(rows: List<Array<String>>, columnWidths: IntArray): EscPosBuilder {

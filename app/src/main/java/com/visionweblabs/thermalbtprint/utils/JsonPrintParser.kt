@@ -27,7 +27,7 @@ object JsonPrintParser {
 
         Log.d(TAG, "Parsed ${commands.size} commands")
         
-        for (cmd in commands) {
+        for ((index, cmd) in commands.withIndex()) {
             val align = when (cmd["align"] as? String) {
                 "center" -> EscPosBuilder.ALIGN_CENTER
                 "right" -> EscPosBuilder.ALIGN_RIGHT
@@ -53,7 +53,9 @@ object JsonPrintParser {
                 "text" -> builder.text(text)
                 "barcode" -> builder.barcode(text)
                 "qr" -> builder.qrCode(text)
-                "cut" -> builder.cut()
+                // Every job already ends with footer + feed + cut, so a trailing cut would
+                // put the footer on a separate scrap of paper
+                "cut" -> if (index < commands.lastIndex) builder.cut()
                 else -> {
                     Log.w(TAG, "Unknown command type: $type, treating as text")
                     builder.text(type)

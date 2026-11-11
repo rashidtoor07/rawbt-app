@@ -7,8 +7,12 @@ An Android application that acts as a printer bridge for thermal Bluetooth print
 -   **Bluetooth Connectivity**: Connects to classic Bluetooth (SPP) thermal printers.
 -   **ESC/POS Support**: A comprehensive `EscPosBuilder` for generating print commands.
 -   **Intent API**: Allows other apps to send print jobs.
--   **Local HTTP Server**: An optional background service that listens for print jobs on `http://127.0.0.1:8080/print`.
+-   **Local HTTP Server**: An optional background service that listens for print jobs on `http://127.0.0.1:8080/print`. Web pages open in the phone's browser can call it too (CORS enabled).
+-   **Browser Printing**: BT Print registers as an Android printer, so Chrome (Share → Print) or any app with a Print option can print to the thermal printer.
+-   **Barcode & QR Printing**: Type a value in the app and print it as a CODE128 barcode or a QR code.
 -   **Simple UI**: For scanning, pairing, and selecting a printer.
+
+Every printout ends with a short `BTPrint by VisionWebLabs.com` footer.
 
 ## 🛠️ How to Build an APK
 
@@ -45,6 +49,17 @@ Copy `app/keystore.properties.example` to `app/keystore.properties` and fill in 
 ```
 
 ## 📱 How to Use
+
+### Printing from a browser
+
+1.  Open BT Print, select your printer, and tap **Enable Browser Printing**.
+2.  In the Android printing settings that open, turn **BT Print** on (one-time setup).
+3.  In Chrome, open the page, tap **⋮ → Share → Print**, and choose **BT Print** as the printer.
+4.  Pick the **58mm roll** or **80mm roll** paper size to match your printer, then tap the print button.
+
+The page is printed as an image, so pages designed for receipt width give the best results. Blank space at the bottom of each page is trimmed automatically to save paper.
+
+Web apps can also print directly from JavaScript with `fetch('http://127.0.0.1:8080/print', ...)` (see the HTTP server section below). Recent Chrome versions ask the user once to allow a website to access devices on the local network.
 
 ### 1. Via Intent
 
@@ -218,6 +233,8 @@ This will show:
 │           │   │   ├── BluetoothDiscoveryManager.kt
 │           │   │   ├── PrinterConnection.kt
 │           │   │   └── PrinterManager.kt
+│           │   ├── printservice/
+│           │   │   └── BtPrintService.kt
 │           │   ├── receivers/
 │           │   │   └── PrintIntentReceiver.kt
 │           │   ├── services/
