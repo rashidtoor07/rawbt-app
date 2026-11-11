@@ -1,9 +1,10 @@
-package com.rawbtclone
+package com.visionweblabs.thermalbtprint
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothAdapter
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,19 +12,24 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
-import com.rawbtclone.bluetooth.BluetoothDiscoveryManager
-import com.rawbtclone.bluetooth.PrinterManager
-import com.rawbtclone.services.PrinterService
-import com.rawbtclone.utils.EscPosBuilder
+import com.visionweblabs.thermalbtprint.bluetooth.BluetoothDiscoveryManager
+import com.visionweblabs.thermalbtprint.bluetooth.PrinterManager
+import com.visionweblabs.thermalbtprint.services.PrinterService
+import com.visionweblabs.thermalbtprint.utils.EscPosBuilder
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -50,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnScan: Button
     private lateinit var btnTestPrint: Button
     private lateinit var btnStopService: Button
+    private lateinit var etBarcode: EditText
 
     private var devicesList: List<BluetoothDevice> = emptyList()
     private lateinit var bluetoothAdapter: BluetoothAdapter
@@ -102,6 +109,11 @@ class MainActivity : AppCompatActivity() {
         btnScan = findViewById(R.id.btnScan)
         btnTestPrint = findViewById(R.id.btnTestPrint)
         btnStopService = findViewById(R.id.btnStopService)
+        etBarcode = findViewById(R.id.etBarcode)
+
+        findViewById<Button>(R.id.btnPrintBarcode).setOnClickListener { printCode(qr = false) }
+        findViewById<Button>(R.id.btnPrintQr).setOnClickListener { printCode(qr = true) }
+        findViewById<Button>(R.id.btnBrowserPrinting).setOnClickListener { openPrintSettings() }
 
         btnScan.setOnClickListener {
             if (!bluetoothDiscoveryManager.hasBluetoothHardware()) {
@@ -153,12 +165,33 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Selected: ${device.name ?: device.address}", Toast.LENGTH_SHORT).show()
         }
 
+        applySystemBarInsets(findViewById(R.id.root))
+
         updateStatus()
         if (checkPermissions()) {
             updateDeviceList()
+            startPrinterService()
+        } else {
+            requestPermissions()
         }
+    }
 
-        // Start local HTTP server service
+    // Android 15+ draws apps behind the navigation bar; keep the bottom buttons clear of it
+    private fun applySystemBarInsets(root: View) {
+        val left = root.paddingLeft
+        val right = root.paddingRight
+        val bottom = root.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            view.setPadding(left + bars.left, view.paddingTop, right + bars.right, bottom + bars.bottom)
+            insets
+        }
+    }
+
+    // A connectedDevice foreground service may only start once Bluetooth permission is granted
+    private fun startPrinterService() {
         val serviceIntent = Intent(this, PrinterService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent)
@@ -197,7 +230,7 @@ class MainActivity : AppCompatActivity() {
             .align(EscPosBuilder.ALIGN_CENTER)
             .fontSize(EscPosBuilder.FONT_SIZE_NORMAL)
             .bold(true)
-            .text("AMINMART RAWBT TEST")
+            .text("BT PRINT TEST")
             .lineBreak()
             .bold(false)
             .fontSize(EscPosBuilder.FONT_SIZE_NORMAL)
@@ -218,11 +251,46 @@ class MainActivity : AppCompatActivity() {
             .lineBreak()
             .lineBreak()
             .align(EscPosBuilder.ALIGN_CENTER)
-            .qrCode("https://github.com/wahyu")
+            .qrCode("BT Print - Test QR Code")
+            .branding()
             .feed(2)
             .cut()
             .build()
 
+        sendToPrinter(data)
+    }
+
+    private fun printCode(qr: Boolean) {
+        val content = etBarcode.text.toString().trim()
+        if (content.isEmpty()) {
+            Toast.makeText(this, R.string.barcode_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        // CODE128 set B only encodes printable ASCII, and long values overflow 58mm paper
+        if (!qr && (content.length > EscPosBuilder.MAX_BARCODE_LENGTH || content.any { it.code !in 32..126 })) {
+            Toast.makeText(
+                this,
+                getString(R.string.barcode_invalid, EscPosBuilder.MAX_BARCODE_LENGTH),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val builder = EscPosBuilder().init().align(EscPosBuilder.ALIGN_CENTER)
+        if (qr) builder.qrCode(content) else builder.barcode(content)
+        sendToPrinter(builder.lineBreak().branding().feed(3).cut().build())
+    }
+
+    private fun openPrintSettings() {
+        Toast.makeText(this, R.string.browser_printing_help, Toast.LENGTH_LONG).show()
+        try {
+            startActivity(Intent(Settings.ACTION_PRINT_SETTINGS))
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.print_settings_unavailable, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun sendToPrinter(data: ByteArray) {
         lifecycleScope.launch {
             printerManager.print(data) { success, error ->
                 if (success) {
@@ -248,12 +316,12 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show()
     }
 
-    private fun checkPermissions(): Boolean {
-        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    // BLUETOOTH_SCAN is declared neverForLocation, so Android 12+ needs no location permission
+    private fun requiredPermissions(): Array<String> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.BLUETOOTH_CONNECT
             )
         } else {
             arrayOf(
@@ -263,26 +331,14 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        return permissions.all {
+    private fun checkPermissions(): Boolean {
+        return requiredPermissions().all {
             ActivityCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
     private fun requestPermissions() {
-        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        } else {
-            arrayOf(
-                Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        }
-        ActivityCompat.requestPermissions(this, permissions, 100)
+        ActivityCompat.requestPermissions(this, requiredPermissions(), 100)
     }
 
     override fun onRequestPermissionsResult(
@@ -291,8 +347,10 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+        // grantResults is empty when the dialog is dismissed, so re-check rather than trust all{}
+        if (requestCode == 100 && checkPermissions()) {
             updateDeviceList()
+            startPrinterService()
         } else {
             Toast.makeText(this, "Permissions required for Bluetooth", Toast.LENGTH_SHORT).show()
         }

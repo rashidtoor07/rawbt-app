@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Aminmart RawBT</string>
+    <string name="app_name">BT Print</string>
     <string name="scan_printer">Scan Printer</string>
     <string name="paired_devices">Paired Devices</string>
     <string name="test_print">Test Print</string>
@@ -8,4 +8,14 @@
     <string name="status_connecting">Status: Connecting...</string>
     <string name="status_connected">Status: Connected</string>
     <string name="stop_service">Stop Service</string>
+    <string name="barcode_hint">Barcode or QR code content</string>
+    <string name="print_barcode">Print Barcode</string>
+    <string name="print_qr">Print QR Code</string>
+    <string name="barcode_empty">Enter the content to print first</string>
+    <string name="barcode_invalid">Barcodes support up to %1$d plain characters (A–Z, 0–9, symbols). Use a QR code for longer text.</string>
+    <string name="browser_printing">Enable Browser Printing</string>
+    <string name="browser_printing_help">Turn on BT Print here, then in Chrome use Share → Print and choose BT Print.</string>
+    <string name="print_settings_unavailable">Printing settings are not available on this device</string>
+    <string name="print_no_document">No document to print</string>
+    <string name="branding">BTPrint by VisionWebLabs.com</string>
 </resources>

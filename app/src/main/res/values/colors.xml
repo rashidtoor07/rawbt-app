@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Pink Primary Colors -->
-    <color name="pink_primary">#E91E63</color>
-    <color name="pink_primary_dark">#C2185B</color>
-    <color name="pink_primary_light">#F8BBD9</color>
-    <color name="pink_accent">#FF4081</color>
-    
-    <!-- Pink Background Colors -->
-    <color name="pink_background">#FCE4EC</color>
-    <color name="pink_surface">#F8BBD9</color>
-    
+    <!-- BT Print Primary Colors -->
+    <color name="bt_primary">#1565C0</color>
+    <color name="bt_primary_dark">#0D47A1</color>
+    <color name="bt_primary_light">#BBDEFB</color>
+    <color name="bt_accent">#00BFA5</color>
+
+    <!-- BT Print Background Colors -->
+    <color name="bt_background">#F0F4F8</color>
+    <color name="bt_surface">#E3F2FD</color>
+
     <!-- Text Colors -->
-    <color name="pink_text_primary">#880E4F</color>
-    <color name="pink_text_secondary">#AD1457</color>
+    <color name="bt_text_primary">#0D2B4E</color>
+    <color name="bt_text_secondary">#1565C0</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
 </resources>

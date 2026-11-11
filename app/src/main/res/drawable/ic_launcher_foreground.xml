@@ -10,7 +10,7 @@
         android:pathData="M28,36h52c2.2,0 4,1.8 4,4v28c0,2.2 -1.8,4 -4,4h-8v8c0,2.2 -1.8,4 -4,4H40c-2.2,0 -4,-1.8 -4,-4v-8h-8c-2.2,0 -4,-1.8 -4,-4V40c0,-2.2 1.8,-4 4,-4z"/>
     <!-- Paper slot -->
     <path
-        android:fillColor="#E91E63"
+        android:fillColor="#00BFA5"
         android:pathData="M36,44h36v12h-36z"/>
     <!-- Paper coming out -->
     <path

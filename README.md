@@ -1,14 +1,18 @@
-# RawBT Clone
+# BT Print
 
-This is an Android application that acts as a printer bridge for thermal Bluetooth printers, similar to the original RAWBT app. It supports ESC/POS commands and can receive print jobs from other applications via Android Intents or an HTTP server.
+An Android application that acts as a printer bridge for thermal Bluetooth printers. It supports ESC/POS commands and can receive print jobs from other applications via Android Intents or an HTTP server.
 
 ## 🚀 Features
 
 -   **Bluetooth Connectivity**: Connects to classic Bluetooth (SPP) thermal printers.
 -   **ESC/POS Support**: A comprehensive `EscPosBuilder` for generating print commands.
 -   **Intent API**: Allows other apps to send print jobs.
--   **Local HTTP Server**: An optional background service that listens for print jobs on `http://127.0.0.1:8080/print`.
+-   **Local HTTP Server**: An optional background service that listens for print jobs on `http://127.0.0.1:8080/print`. Web pages open in the phone's browser can call it too (CORS enabled).
+-   **Browser Printing**: BT Print registers as an Android printer, so Chrome (Share → Print) or any app with a Print option can print to the thermal printer.
+-   **Barcode & QR Printing**: Type a value in the app and print it as a CODE128 barcode or a QR code.
 -   **Simple UI**: For scanning, pairing, and selecting a printer.
+
+Every printout ends with a short `BTPrint by VisionWebLabs.com` footer.
 
 ## 🛠️ How to Build an APK
 
@@ -27,13 +31,65 @@ This is an Android application that acts as a printer bridge for thermal Bluetoo
 3.  **Locate the APK**:
     *   After a successful build (either via Android Studio or `gradlew`), the APK file (`app-debug.apk` for debug builds) will be located in the `app/build/outputs/apk/debug/` directory.
 
+## 🔐 Signed Releases
+
+### On GitHub (recommended)
+
+The **Signed Release** workflow builds a signed APK (for direct install) and AAB (for the Play Store).
+
+One-time setup, in the repository on GitHub: **Settings → Secrets and variables → Actions → New repository secret**. Add two secrets:
+
+| Name | Value |
+|---|---|
+| `KEYSTORE_BASE64` | Contents of `KEYSTORE_BASE64.txt` (the keystore file encoded as text) |
+| `KEYSTORE_PASSWORD` | Contents of `KEYSTORE_PASSWORD.txt` |
+
+To create a keystore text yourself on a Mac: `base64 -i btprint-release.jks | pbcopy`, then paste it as the secret.
+
+Then either:
+
+- **Publish a release:** create a tag such as `v1.0.0` (on GitHub: **Releases → Draft a new release → Choose a tag → type `v1.0.0` → Create new tag → Publish release**). The workflow attaches `BTPrint-1.0.0.apk` and `BTPrint-1.0.0.aab` to that release.
+- **Just get the files:** **Actions → Signed Release → Run workflow**, then download the artifact from the finished run.
+
+Each build gets a higher version code automatically, which Play requires for every upload.
+
+See [PLAY_STORE.md](PLAY_STORE.md) for the Play Console steps.
+
+### Locally
+
+`app/keystore.properties` (git-ignored, never commit it) tells Gradle which keystore to sign release builds with:
+
+```
+storeFile=btprint-release.jks
+storePassword=********
+keyAlias=btprint
+keyPassword=********
+```
+
+Copy `app/keystore.properties.example` to `app/keystore.properties` and fill in the real values, keeping the `.jks` file next to it inside `app/`. Without this file, `assembleRelease`/`bundleRelease` produce an **unsigned** build. Back up the `.jks` file and passwords somewhere durable (password manager, secure vault) — losing them means you can never publish an update to the same Play Store listing again.
+
+```bash
+./gradlew bundleRelease   # app/build/outputs/bundle/release/app-release.aab
+```
+
 ## 📱 How to Use
+
+### Printing from a browser
+
+1.  Open BT Print, select your printer, and tap **Enable Browser Printing**.
+2.  In the Android printing settings that open, turn **BT Print** on (one-time setup).
+3.  In Chrome, open the page, tap **⋮ → Share → Print**, and choose **BT Print** as the printer.
+4.  Pick the **58mm roll** or **80mm roll** paper size to match your printer, then tap the print button.
+
+The page is printed as an image, so pages designed for receipt width give the best results. Blank space at the bottom of each page is trimmed automatically to save paper.
+
+Web apps can also print directly from JavaScript with `fetch('http://127.0.0.1:8080/print', ...)` (see the HTTP server section below). Recent Chrome versions ask the user once to allow a website to access devices on the local network.
 
 ### 1. Via Intent
 
 You can trigger a print job from another app by sending a `Broadcast Intent`.
 
--   **Action**: `com.rawbtclone.PRINT`
+-   **Action**: `com.visionweblabs.thermalbtprint.PRINT`
 -   **Extras**:
     -   `type`: (String) `text` or `json`.
     -   `data`: (String) The content to print. For `json`, use the same command array as the HTTP server (see the JSON command format below).
@@ -42,11 +98,11 @@ You can trigger a print job from another app by sending a `Broadcast Intent`.
 
 ```bash
 # Plain text
-adb shell am broadcast -a com.rawbtclone.PRINT -n com.rawbtclone/.receivers.PrintIntentReceiver \
+adb shell am broadcast -a com.visionweblabs.thermalbtprint.PRINT -n com.visionweblabs.thermalbtprint/.receivers.PrintIntentReceiver \
   --es type text --es data "Hello World!"
 
 # JSON commands
-adb shell am broadcast -a com.rawbtclone.PRINT -n com.rawbtclone/.receivers.PrintIntentReceiver \
+adb shell am broadcast -a com.visionweblabs.thermalbtprint.PRINT -n com.visionweblabs.thermalbtprint/.receivers.PrintIntentReceiver \
   --es type json --es data '[{"type":"text","text":"My Store","align":"center","bold":true,"newline":true},{"type":"cut"}]'
 ```
 
@@ -195,12 +251,14 @@ This will show:
 │   └── src
 │       └── main
 │           ├── AndroidManifest.xml
-│           ├── java/com/rawbtclone
+│           ├── java/com/visionweblabs/thermalbtprint
 │           │   ├── MainActivity.kt
 │           │   ├── bluetooth/
 │           │   │   ├── BluetoothDiscoveryManager.kt
 │           │   │   ├── PrinterConnection.kt
 │           │   │   └── PrinterManager.kt
+│           │   ├── printservice/
+│           │   │   └── BtPrintService.kt
 │           │   ├── receivers/
 │           │   │   └── PrintIntentReceiver.kt
 │           │   ├── services/

@@ -1,4 +1,4 @@
-package com.rawbtclone.services
+package com.visionweblabs.thermalbtprint.services
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -11,9 +11,9 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.rawbtclone.bluetooth.PrinterManager
-import com.rawbtclone.utils.EscPosBuilder
-import com.rawbtclone.utils.JsonPrintParser
+import com.visionweblabs.thermalbtprint.bluetooth.PrinterManager
+import com.visionweblabs.thermalbtprint.utils.EscPosBuilder
+import com.visionweblabs.thermalbtprint.utils.JsonPrintParser
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -58,7 +58,7 @@ class PrinterService : Service() {
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         } else {
             startForeground(1, notification)
         }
@@ -90,6 +90,7 @@ class PrinterService : Service() {
             socket.soTimeout = 10_000
             val input = BufferedInputStream(socket.inputStream)
 
+            val method = readLine(input)?.substringBefore(' ') ?: return@withContext
             var contentLength = 0
             // Parse HTTP headers
             while (true) {
@@ -98,6 +99,12 @@ class PrinterService : Service() {
                 if (line.startsWith("Content-Length:", ignoreCase = true)) {
                     contentLength = line.substring(15).trim().toIntOrNull() ?: 0
                 }
+            }
+
+            // Browsers send a CORS preflight before a cross-origin JSON POST
+            if (method == "OPTIONS") {
+                respondPreflight(socket)
+                return@withContext
             }
             require(contentLength in 0..MAX_BODY_BYTES) { "Invalid Content-Length" }
 
@@ -110,7 +117,6 @@ class PrinterService : Service() {
                 bytesRead += read
             }
             val jsonBody = String(body, 0, bytesRead, Charsets.UTF_8)
-            Log.d("PrinterService", "Received body: $jsonBody")
 
             val error = if (jsonBody.isNotBlank()) printFromJson(jsonBody) else null
             if (error == null) {
@@ -149,6 +155,7 @@ class PrinterService : Service() {
     private fun respond(socket: Socket, status: String, body: JSONObject) {
         val bytes = body.toString().toByteArray(Charsets.UTF_8)
         val header = "HTTP/1.1 $status\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
             "Content-Type: application/json\r\n" +
             "Content-Length: ${bytes.size}\r\n" +
             "Connection: close\r\n\r\n"
@@ -159,11 +166,26 @@ class PrinterService : Service() {
         }
     }
 
+    private fun respondPreflight(socket: Socket) {
+        val header = "HTTP/1.1 204 No Content\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
+            "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n" +
+            "Access-Control-Allow-Headers: Content-Type\r\n" +
+            "Access-Control-Allow-Private-Network: true\r\n" +
+            "Access-Control-Max-Age: 600\r\n" +
+            "Content-Length: 0\r\n" +
+            "Connection: close\r\n\r\n"
+        socket.outputStream.apply {
+            write(header.toByteArray(Charsets.US_ASCII))
+            flush()
+        }
+    }
+
     /** Returns null on success, otherwise the error message. */
     private suspend fun printFromJson(json: String): String? {
         val builder = EscPosBuilder().init()
         JsonPrintParser.parseAndBuild(json, builder)
-        val printData = builder.feed(3).cut().build()
+        val printData = builder.branding().feed(3).cut().build()
         Log.d("PrinterService", "Print data size: ${printData.size} bytes")
 
         var error: String? = null

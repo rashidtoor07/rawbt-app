@@ -1,12 +1,12 @@
-package com.rawbtclone.receivers
+package com.visionweblabs.thermalbtprint.receivers
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.rawbtclone.bluetooth.PrinterManager
-import com.rawbtclone.utils.EscPosBuilder
-import com.rawbtclone.utils.JsonPrintParser
+import com.visionweblabs.thermalbtprint.bluetooth.PrinterManager
+import com.visionweblabs.thermalbtprint.utils.EscPosBuilder
+import com.visionweblabs.thermalbtprint.utils.JsonPrintParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 class PrintIntentReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == "com.rawbtclone.PRINT") {
+        if (intent.action == "com.visionweblabs.thermalbtprint.PRINT") {
             val type = intent.getStringExtra("type") ?: "text"
             val dataString = intent.getStringExtra("data") ?: return
 
@@ -28,7 +28,7 @@ class PrintIntentReceiver : BroadcastReceiver() {
                     builder.text(dataString).lineBreak()
                 }
 
-                val printData = builder.feed(3).cut().build()
+                val printData = builder.branding().feed(3).cut().build()
                 
                 // Keep the process alive until the print finishes; onReceive returning
                 // alone lets the system kill it mid-job.

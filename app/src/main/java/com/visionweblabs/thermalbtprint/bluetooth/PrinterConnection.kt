@@ -1,4 +1,4 @@
-package com.rawbtclone.bluetooth
+package com.visionweblabs.thermalbtprint.bluetooth
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
